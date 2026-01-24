@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DA42 NG Performance Calculator (Safe/Round-Up)</title>
+    <style>
+        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
+        .container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; color: #333; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { width: 100%; padding: 10px; background-color: #d9534f; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        button:hover { background-color: #c9302c; }
+        .result-section { margin-top: 30px; border-top: 2px solid #eee; padding-top: 20px; }
+        .result-box { background: #e9ecef; padding: 15px; border-radius: 5px; margin-bottom: 10px; }
+        .result-title { font-weight: bold; color: #555; margin-bottom: 5px; }
+        .result-value { font-size: 1.2em; color: #000; font-weight: bold; }
+        .sub-value { font-size: 0.9em; color: #666; }
+        .pa-display { text-align: right; color: #666; font-style: italic; margin-bottom: 5px; }
+        .calc-info { text-align: right; color: #d9534f; font-weight: bold; font-size: 0.9em; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>DA42 NG Performance (1900kg)</h1>
+    <p style="text-align:center; font-size:0.9em; color:#666;">Conservative Mode: Inputs are rounded UP to next chart bracket.</p>
+    
+    <div class="input-group">
+        <label>Airport Altitude (ft)</label>
+        <input type="number" id="altitude" placeholder="e.g. 1000" value="0">
+    </div>
+    <div class="input-group">
+        <label>QNH (inHg)</label>
+        <input type="number" id="qnh" step="0.01" placeholder="e.g. 29.92" value="29.92">
+    </div>
+    <div class="input-group">
+        <label>Temperature (°C)</label>
+        <input type="number" id="temp" placeholder="e.g. 11" value="20">
+    </div>
+
+    <div class="pa-display" id="paDisplay">Pressure Altitude: 0 ft</div>
+    <div class="calc-info" id="calcInfo">Using Chart Values: Alt 0 ft / Temp 0°C</div>
+
+    <button onclick="calculatePerformance()">Calculate (Safe Mode)</button>
+
+    <div id="results" class="result-section" style="display:none;">
+        
+        <div class="result-box">
+            <div class="result-title">Takeoff Performance (Flaps UP, MAX Power)</div>
+            <div>Ground Roll: <span id="toRoll" class="result-value">---</span> m</div>
+            <div>50ft Distance: <span id="to50" class="result-value">---</span> m</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-title">Climb Performance (At rounded conditions)</div>
+            <div>All Engines (92%, Flaps UP): <span id="climbAll" class="result-value">---</span> ft/min</div>
+            <div>One Engine Inop (Feathered, Flaps UP): <span id="climbOne" class="result-value">---</span> ft/min</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-title">Service Ceiling (Est. at rounded Temp)</div>
+            <div>All Engines (>100fpm): <span id="ceilAll" class="result-value">---</span> ft</div>
+            <div>One Engine Inop (>50fpm): <span id="ceilOne" class="result-value">---</span> ft</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-title">Landing Normal (Flaps LDG, IDLE)</div>
+            <div>Ground Roll: <span id="ldgRoll" class="result-value">---</span> m</div>
+            <div>50ft Distance: <span id="ldg50" class="result-value">---</span> m</div>
+        </div>
+
+        <div class="result-box">
+            <div class="result-title">Abnormal Landing (Flaps UP, IDLE)</div>
+            <div>Ground Roll: <span id="abnLdgRoll" class="result-value">---</span> m</div>
+            <div>50ft Distance: <span id="abnLdg50" class="result-value">---</span> m</div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+// --- DATA SOURCE ---
+// Page 1: Takeoff
+const takeoffData = {
+    temps: [0, 10, 20, 30, 40, 50],
+    alts: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000],
+    roll: [
+        [420, 450, 480, 510, 570, 660], 
+        [450, 480, 510, 550, 620, 720], 
+        [480, 510, 540, 590, 670, 780], 
+        [510, 550, 580, 630, 740, 850], 
+        [550, 590, 630, 690, 800, 930], 
+        [590, 630, 680, 760, 880, null],
+        [630, 680, 730, 840, 970, null],
+        [680, 740, 800, 920, 1070, null],
+        [740, 810, 880, 1020, 1180, null],
+        [810, 880, 970, 1130, 1300, null],
+        [890, 960, 1070, 1250, null, null]
+    ],
+    dist50: [
+        [670, 710, 760, 830, 940, 1110],
+        [720, 770, 820, 900, 1030, 1220],
+        [770, 820, 890, 970, 1130, 1350],
+        [830, 890, 960, 1060, 1250, 1500],
+        [890, 960, 1040, 1170, 1390, 1680],
+        [960, 1040, 1130, 1300, 1550, null],
+        [1050, 1140, 1240, 1460, 1760, null],
+        [1150, 1250, 1380, 1650, 2000, null],
+        [1260, 1390, 1540, 1870, 2220, null],
+        [1400, 1550, 1750, 2120, 2360, null],
+        [1570, 1760, 2010, 2260, null, null]
+    ]
+};
+
+// Page 2: Climb All Engines
+const climbAllData = {
+    temps: [-20, -10, 0, 10, 20, 30, 40, 50],
+    alts: [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000],
+    roc: [
+        [1010, 1030, 1000, 990, 970, 940, 880, 740],
+        [1000, 950, 970, 920, 900, 860, 800, 660],
+        [940, 900, 860, 880, 820, 790, 700, 540],
+        [970, 980, 950, 940, 920, 840, 620, 420],
+        [900, 860, 880, 820, 840, 750, 510, 320],
+        [900, 950, 810, 920, 840, 630, 370, 220],
+        [760, 690, 780, 870, 800, 510, null, null],
+        [720, 660, 740, 660, 520, 380, null, null],
+        [614, 512, null, null, null, null, null, null],
+        [null, null, null, null, null, null, null, null]
+    ]
+};
+
+// Page 3: Climb Single Engine
+const climbOneData = {
+    temps: [-20, -10, 0, 10, 20, 30, 40, 50],
+    alts: [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000],
+    roc: [
+        [180, 165, 145, 155, 130, 120, 100, 70],
+        [155, 145, 120, 130, 105, 65, 90, 35],
+        [135, 90, 105, 120, 80, 60, 35, 0],
+        [110, 60, 90, 75, 45, 0, 25, null],
+        [80, 45, 5, 45, 60, 30, -5, null],
+        [15, 30, -60, -35, -15, 15, -25, null],
+        [-40, -10, -55, -125, null, null, null, null],
+        [-35, -120, -90, -65, null, null, null, null],
+        [-105, -155, -190, -130, null, null, null, null],
+        [-175, -195, -225, -270, null, null, null, null]
+    ]
+};
+
+// Page 4: Landing Normal
+const ldgNormData = {
+    temps: [0, 10, 20, 30, 40, 50],
+    alts: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000],
+    roll: [
+        [370, 380, 390, 420, 480, null],
+        [380, 390, 410, 450, 500, null],
+        [390, 410, 420, 470, 530, null],
+        [410, 420, 440, 500, 550, null],
+        [420, 440, 460, 520, 580, null],
+        [440, 450, 490, 550, null, null],
+        [450, 470, 520, 580, null, null],
+        [480, 490, 550, 620, null, null],
+        [510, 530, 600, 670, null, null],
+        [550, 580, 660, 730, null, null],
+        [590, 640, 720, null, null, null]
+    ],
+    dist50: [
+        [610, 630, 650, 700, 780, null],
+        [630, 650, 670, 730, 820, null],
+        [650, 670, 690, 770, 860, null],
+        [670, 690, 720, 810, 900, null],
+        [690, 710, 760, 850, 950, null],
+        [720, 740, 800, 890, null, null],
+        [740, 760, 840, 940, null, null],
+        [770, 800, 890, 990, null, null],
+        [820, 850, 960, 1070, null, null],
+        [870, 920, 1030, 1150, null, null],
+        [930, 1000, 1120, null, null, null]
+    ]
+};
+
+// Page 5: Landing Abnormal
+const ldgAbnData = {
+    temps: [0, 10, 20, 30, 40, 50],
+    alts: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000],
+    roll: [
+        [490, 500, 520, 580, 650, null],
+        [500, 520, 540, 610, 690, null],
+        [520, 540, 560, 650, 720, null],
+        [540, 560, 580, 680, 760, null],
+        [560, 580, 600, 710, 800, null],
+        [580, 600, 620, 750, null, null],
+        [600, 620, 640, 790, null, null],
+        [630, 650, 680, 850, null, null],
+        [670, 700, 730, 920, null, null],
+        [730, 750, 800, 1010, null, null],
+        [790, 810, 880, null, null, null]
+    ],
+    dist50: [
+        [820, 840, 870, 960, 1070, null],
+        [840, 870, 890, 1010, 1120, null],
+        [870, 890, 920, 1060, 1180, null],
+        [890, 920, 950, 1110, 1240, null],
+        [920, 950, 980, 1160, 1300, null],
+        [950, 980, 1010, 1220, null, null],
+        [980, 1010, 1050, 1280, null, null],
+        [1030, 1060, 1090, 1360, null, null],
+        [1090, 1120, 1170, 1470, null, null],
+        [1160, 1200, 1270, 1590, null, null],
+        [1250, 1280, 1380, null, null, null]
+    ]
+};
+
+// --- LOGIC ---
+
+function calculatePerformance() {
+    // 1. Get Inputs
+    const alt = parseFloat(document.getElementById('altitude').value) || 0;
+    const qnh = parseFloat(document.getElementById('qnh').value) || 29.92;
+    const temp = parseFloat(document.getElementById('temp').value) || 0;
+
+    // 2. Calculate Pressure Altitude
+    const pa = Math.round((29.92 - qnh) * 1000 + alt);
+    
+    // 3. Determine "Rounded Up" Values for Lookup
+    // Find the closest chart values that are >= input
+    
+    // Helper to find index
+    const findCeilIndex = (arr, val) => {
+        for(let i=0; i<arr.length; i++) {
+            if(arr[i] >= val) return i;
+        }
+        return arr.length - 1; // If above max, use max (Safe constraint)
+    };
+
+    // Use Takeoff Data to find standard indices (Assume all charts share similar steps, but we will look up per chart to be safe)
+    // Actually, for display purposes we just show what we are targeting based on standard steps
+    const chartTemps = takeoffData.temps;
+    const chartAlts = takeoffData.alts;
+    
+    const safeTempIdx = findCeilIndex(chartTemps, temp);
+    const safeAltIdx = findCeilIndex(chartAlts, pa);
+    
+    const usedTemp = chartTemps[safeTempIdx];
+    const usedAlt = chartAlts[safeAltIdx];
+
+    // Update Display
+    document.getElementById('paDisplay').innerText = `Calculated Pressure Altitude: ${pa} ft`;
+    document.getElementById('calcInfo').innerText = `Used for Calculation (Rounded UP): Alt ${usedAlt} ft / Temp ${usedTemp}°C`;
+    document.getElementById('results').style.display = 'block';
+
+    // 4. Lookup Values (No Interpolation)
+    
+    // Takeoff
+    const toRoll = getSafeValue(takeoffData, pa, temp);
+    const to50 = getSafeValue({...takeoffData, roll: takeoffData.dist50}, pa, temp);
+
+    document.getElementById('toRoll').innerText = toRoll !== null ? toRoll : "N/A";
+    document.getElementById('to50').innerText = to50 !== null ? to50 : "N/A";
+
+    // Climb (Current)
+    const rocAll = getSafeValue(climbAllData, pa, temp, "roc");
+    const rocOne = getSafeValue(climbOneData, pa, temp, "roc");
+
+    document.getElementById('climbAll').innerText = rocAll !== null ? rocAll : "N/A";
+    document.getElementById('climbOne').innerText = rocOne !== null ? rocOne : "N/A";
+
+    // Service Ceiling (Search Algorithm)
+    // For ceiling, we will use the ROUNDED UP Temperature to select the column,
+    // then find where that column crosses the limit. 
+    // We do NOT round the resulting altitude because the ceiling IS the altitude limit.
+    const ceilAll = findCeiling(climbAllData, usedTemp, 100);
+    const ceilOne = findCeiling(climbOneData, usedTemp, 50);
+
+    document.getElementById('ceilAll').innerText = ceilAll !== null ? Math.round(ceilAll) : "< 0";
+    document.getElementById('ceilOne').innerText = ceilOne !== null ? Math.round(ceilOne) : "< 0";
+
+    // Landing Normal
+    const lR = getSafeValue(ldgNormData, pa, temp);
+    const l50 = getSafeValue({...ldgNormData, roll: ldgNormData.dist50}, pa, temp);
+    document.getElementById('ldgRoll').innerText = lR !== null ? lR : "N/A";
+    document.getElementById('ldg50').innerText = l50 !== null ? l50 : "N/A";
+
+    // Landing Abnormal
+    const alR = getSafeValue(ldgAbnData, pa, temp);
+    const al50 = getSafeValue({...ldgAbnData, roll: ldgAbnData.dist50}, pa, temp);
+    document.getElementById('abnLdgRoll').innerText = alR !== null ? alR : "N/A";
+    document.getElementById('abnLdg50').innerText = al50 !== null ? al50 : "N/A";
+}
+
+// "Step" Function (Round Up Lookup)
+function getSafeValue(dataObj, targetAlt, targetTemp, dataKey = "roll") {
+    const matrix = dataObj[dataKey];
+    const alts = dataObj.alts;
+    const temps = dataObj.temps;
+
+    // 1. Find Temp Index (Values >= target)
+    let tIdx = -1;
+    for (let i = 0; i < temps.length; i++) {
+        if (temps[i] >= targetTemp) {
+            tIdx = i;
+            break;
+        }
+    }
+    if (tIdx === -1) tIdx = temps.length - 1; // Cap at max
+
+    // 2. Find Alt Index (Values >= target)
+    let aIdx = -1;
+    for (let i = 0; i < alts.length; i++) {
+        if (alts[i] >= targetAlt) {
+            aIdx = i;
+            break;
+        }
+    }
+    if (aIdx === -1) aIdx = alts.length - 1; // Cap at max
+
+    return matrix[aIdx][tIdx];
+}
+
+// Function to find Service Ceiling
+function findCeiling(dataObj, usedTemp, limitROC) {
+    // 1. Find the column index for the Used Temperature (Already rounded up)
+    let tIdx = dataObj.temps.indexOf(usedTemp);
+    if (tIdx === -1) tIdx = dataObj.temps.length - 1; // Fallback
+
+    // 2. Get ROCs for this specific temperature column
+    const colROCs = [];
+    for(let i=0; i<dataObj.alts.length; i++) {
+        colROCs.push(dataObj.roc[i][tIdx]);
+    }
+
+    // 3. Scan downwards to find where we cross the limit
+    for (let i = 0; i < colROCs.length - 1; i++) {
+        const r1 = colROCs[i];
+        const r2 = colROCs[i+1];
+        const a1 = dataObj.alts[i];
+        const a2 = dataObj.alts[i+1];
+
+        if (r1 !== null && r2 !== null) {
+            if ((r1 >= limitROC && r2 <= limitROC)) {
+                // Linear Interpolate the ALTITUDE crossing
+                const ratio = (limitROC - r1) / (r2 - r1);
+                return a1 + (a2 - a1) * ratio;
+            }
+        }
+    }
+    
+    if (colROCs[0] < limitROC) return 0;
+    if (colROCs[colROCs.length-1] > limitROC) return dataObj.alts[dataObj.alts.length-1];
+
+    return null;
+}
+
+</script>
+
+</body>
+</html>
