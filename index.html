@@ -141,7 +141,7 @@
             <div>
                 <label>Runway Slope (%)</label>
                 <input type="number" id="slope" value="0" step="0.01" oninput="calc()">
-                <small style="color:#666; font-size:0.75rem;">(Calc assumes Uphill T/O & Downhill LDG)</small>
+                <small style="color:#666; font-size:0.75rem;">(Calculated as integer ceiling: 0.72% → 1%)</small>
             </div>
         </div>
     </div>
@@ -150,7 +150,7 @@
         Pressure Altitude: <span id="pa-raw">0</span> ft
         <br>
         <span style="font-size:0.8rem; font-weight:normal; color:#ccc;">
-            (Chart Calculation uses: <span id="pa-used">0</span> ft / Temp <span id="temp-used">0</span>°C)
+            (Chart Uses: PA <span id="pa-used">0</span> ft / Temp <span id="temp-used">0</span>°C)
         </span>
     </div>
 
@@ -168,7 +168,7 @@
                 <span id="to-50-m">---</span> m <span class="sub-text"><span id="to-50-ft">---</span> ft</span>
             </div>
         </div>
-        <div class="warning">Includes Slope Penalty (+12% per 1%)</div>
+        <div class="warning">Slope Penalty: +12% per 1% (Rounded Up)</div>
     </div>
 
     <div class="card">
@@ -185,7 +185,7 @@
                 <span id="ld-50-m">---</span> m <span class="sub-text"><span id="ld-50-ft">---</span> ft</span>
             </div>
         </div>
-        <div class="warning">Includes Slope Penalty (+9% per 1%)</div>
+        <div class="warning">Slope Penalty: +9% per 1% (Rounded Up)</div>
     </div>
 
     <div class="card">
@@ -202,11 +202,14 @@
                 <span id="abn-50-m">---</span> m <span class="sub-text"><span id="abn-50-ft">---</span> ft</span>
             </div>
         </div>
-        <div class="warning">Includes Slope Penalty (+9% per 1%)</div>
+        <div class="warning">Slope Penalty: +9% per 1% (Rounded Up)</div>
     </div>
 
     <div class="card">
         <h3>Climb Performance & Ceiling</h3>
+        <p style="font-size:0.8rem; color:#666; margin-bottom:10px;">
+            *Values directly from table. ROC PA rounded up to 2000ft step. Ceiling based on highest white cell.
+        </p>
         <div class="result-row">
             <span class="result-label">Rate of Climb (Both Engines)</span>
             <div class="result-val"><span id="roc-all">---</span> fpm</div>
@@ -217,14 +220,13 @@
         </div>
         <hr>
         <div class="result-row">
-            <span class="result-label">Service Ceiling (Both, 100fpm)</span>
+            <span class="result-label">Service Ceiling (Both, ≥100fpm)</span>
             <div class="result-val"><span id="ceil-all">---</span> ft</div>
         </div>
         <div class="result-row">
-            <span class="result-label">Service Ceiling (Single, 50fpm)</span>
+            <span class="result-label">Service Ceiling (Single, ≥50fpm)</span>
             <div class="result-val"><span id="ceil-single">---</span> ft</div>
         </div>
-        <div class="warning">Ceiling calculated for input Temp (Round Up)</div>
     </div>
 </div>
 
@@ -263,16 +265,12 @@
 
     // Page 4: Landing Normal
     const LDG_GR = [
-        [370,380,390,420,480,550], // Extrapolated 50C based on pattern if needed, but PDF implies merge. Using strict read.
-        // PDF P4: 0/370, 10/380, 20/390, 30/420, 40/480, 50(ISA+??) lets use safe logic. 
-        // Correct read from src [148]: 40C=480, 50C=?? Data merges.
-        // Let's use the provided table logic:
         [370,380,390,420,480,500], // 0ft
         [380,390,410,450,500,520], // 1000
         [390,410,420,470,530,550], // 2000
         [410,420,440,500,550,570], // 3000
         [420,440,460,520,580,600], // 4000
-        [440,450,490,550,600,620], // 5000 (Approx safe values for missing cells or just repeat max)
+        [440,450,490,550,600,620], // 5000
         [450,470,520,580,630,650], // 6000
         [480,490,550,620,670,690], // 7000
         [510,530,600,670,720,740], // 8000
@@ -321,12 +319,12 @@
         [1250,1280,1380,1550,1700,1850]
     ];
 
-    // Climb Data: Temps [-20, -10, 0, 10, 20, 30, 40, 50]
+    // Climb Data: Temps [-20, -10, 0, 10, 20, 30, 40, 50] (Indices 0-7)
     // Alts: 0, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000
     const CLIMB_TEMPS = [-20, -10, 0, 10, 20, 30, 40, 50];
     const CLIMB_ALTS = [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000];
     
-    // Page 2: All Engine ROC
+    [cite_start]// Page 2: All Engine ROC [cite: 48, 52]
     const ROC_ALL = [
         [1010,1030,1030,1030,1000,970,920,840], // 0ft
         [1000,1020,1020,980,950,920,860,790],   // 2000
@@ -334,13 +332,13 @@
         [970,980,980,900,840,800,660,590],      // 6000
         [940,960,950,860,790,720,590,450],      // 8000
         [920,940,920,820,740,660,530,290],      // 10000
-        [900,900,890,770,660,520,390,150],      // 12000 (extrapolated low end)
+        [900,900,890,770,660,520,390,150],      // 12000 
         [860,860,850,710,540,380,290,100],      // 14000
         [820,820,820,620,420,220,100,50],       // 16000
         [740,740,730,510,320,100,50,0]          // 18000
     ];
 
-    // Page 3: Single Engine ROC
+    [cite_start]// Page 3: Single Engine ROC [cite: 57]
     const ROC_SINGLE = [
         [180,165,165,155,130,100,70,35],        // 0ft
         [155,145,145,130,105,90,35,0],          // 2000
@@ -360,101 +358,33 @@
         calc();
     }
 
-    function getTableVal(table, tempIdx, altFt) {
+    // --- Core Logic ---
+
+    // 1. T/O & LDG Lookup
+    function getDistVal(table, tempIdx, altFt) {
+        // T/O & LDG charts are 1000ft steps. Round PA up to nearest 1000.
         let altIdx = Math.ceil(altFt / 1000);
         if (altIdx < 0) altIdx = 0;
-        if (altIdx >= table.length) altIdx = table.length - 1; // Cap at max
+        if (altIdx >= table.length) altIdx = table.length - 1; 
         
         let val = table[altIdx][tempIdx];
         if (val === 9999 || val === undefined) return null;
         return val;
     }
 
-    // Climb value interpolation for display (current alt)
-    function getClimbVal(table, temp, alt) {
-        // Find Temp Column
-        let tIdx = -1;
-        for(let i=0; i<CLIMB_TEMPS.length; i++){
-            if(temp <= CLIMB_TEMPS[i]) {
-                tIdx = i;
-                break;
+    // 2. Ceiling Logic (Find highest white cell)
+    function calcServiceCeiling(table, tempIdx, limit) {
+        let maxAlt = "N/A";
+        // Iterate through all altitudes for the given temp column
+        // If value >= limit, it's valid. Keep track of the highest valid altitude.
+        // Since table is sorted by altitude (asc), we just walk through.
+        for (let i = 0; i < CLIMB_ALTS.length; i++) {
+            let val = table[i][tempIdx];
+            if (val !== undefined && val >= limit) {
+                maxAlt = CLIMB_ALTS[i];
             }
         }
-        if (tIdx === -1) tIdx = CLIMB_TEMPS.length - 1; // Cap max temp
-
-        // Linear interpolate Altitude rows
-        // Find row above and below
-        let idxLower = -1;
-        for(let i=0; i<CLIMB_ALTS.length; i++){
-            if(CLIMB_ALTS[i] <= alt) idxLower = i;
-        }
-        if(idxLower === -1) idxLower = 0;
-        if(idxLower >= CLIMB_ALTS.length -1) idxLower = CLIMB_ALTS.length - 2;
-
-        let alt1 = CLIMB_ALTS[idxLower];
-        let alt2 = CLIMB_ALTS[idxLower+1];
-        let val1 = table[idxLower][tIdx];
-        let val2 = table[idxLower+1][tIdx];
-
-        if(val1 === undefined || val2 === undefined) return "N/A";
-
-        // Interpolate
-        let ratio = (alt - alt1) / (alt2 - alt1);
-        let result = val1 + (val2 - val1) * ratio;
-        return Math.round(result);
-    }
-
-    // Calculate Service Ceiling (Reverse Lookup)
-    function calcServiceCeiling(table, temp, limit) {
-        // 1. Determine Temp Column (Round UP logic as per user request for charts, 
-        // strictly speaking ceiling is exact, but let's use the rounded temp column for safety/consistency)
-        let tIdx = -1;
-        // User said "11C->20C".
-        let roundedTemp = Math.ceil(temp / 10) * 10;
-        // Find this column in CLIMB_TEMPS
-        for(let i=0; i<CLIMB_TEMPS.length; i++) {
-            if(CLIMB_TEMPS[i] === roundedTemp) {
-                tIdx = i;
-                break;
-            }
-        }
-        // If exact match not found (e.g. rounded is 20, array has 20), handle bounds
-        if (tIdx === -1) {
-            if(roundedTemp < -20) tIdx = 0;
-            else if(roundedTemp > 50) tIdx = 7;
-            else {
-                // Should match unless logic error, fallback to closest
-                 tIdx = CLIMB_TEMPS.findIndex(t => t >= roundedTemp);
-            }
-        }
-
-        // 2. Scan Altitude rows in this column
-        for (let i = 0; i < CLIMB_ALTS.length - 1; i++) {
-            let alt1 = CLIMB_ALTS[i];
-            let alt2 = CLIMB_ALTS[i+1];
-            let roc1 = table[i][tIdx];
-            let roc2 = table[i+1][tIdx];
-
-            // Check if limit is crossed
-            // ROC decreases with altitude usually.
-            if (roc1 >= limit && roc2 <= limit) {
-                // Interpolate
-                // limit = roc1 + (roc2 - roc1) * ratio
-                // ratio = (limit - roc1) / (roc2 - roc1)
-                // alt = alt1 + (alt2 - alt1) * ratio
-                if (roc1 === roc2) return alt1; // avoid zero div
-                let ratio = (limit - roc1) / (roc2 - roc1);
-                let ceiling = alt1 + (alt2 - alt1) * ratio;
-                return Math.floor(ceiling);
-            }
-        }
-        
-        // If never reaches limit (always above)
-        if (table[table.length-1][tIdx] > limit) return "> " + CLIMB_ALTS[CLIMB_ALTS.length-1];
-        // If already below at SL
-        if (table[0][tIdx] < limit) return "< SL";
-        
-        return "N/A";
+        return maxAlt;
     }
 
     function calc() {
@@ -469,35 +399,46 @@
         const paRaw = (29.92 - qnh) * 1000 + elev;
         document.getElementById('pa-raw').innerText = Math.round(paRaw);
 
-        // 2. Rounding for Lookup
+        // 2. Rounding for Lookup (Safety)
         // Temp: 11 -> 20. 
-        // Logic: Math.ceil(temp/10)*10.
-        // Clamp to 0-50 for T/O tables.
         let chartTemp = Math.ceil(tempInput / 10) * 10;
-        if (chartTemp < 0) chartTemp = 0; 
-        if (chartTemp > 50) chartTemp = 50;
-        const tempIdx = chartTemp / 10; // 0,1,2,3,4,5
+        
+        // Climb Chart Temp Index (Columns are -20 to 50)
+        let climbTempIdx = -1;
+        for(let i=0; i<CLIMB_TEMPS.length; i++) {
+            if(CLIMB_TEMPS[i] === chartTemp) { climbTempIdx = i; break; }
+        }
+        // Fallback for bounds
+        if(climbTempIdx === -1) {
+            if(chartTemp < -20) climbTempIdx = 0;
+            else if(chartTemp > 50) climbTempIdx = 7;
+        }
+
+        // T/O & LDG Temp Index (Columns are 0 to 50)
+        let distTemp = chartTemp;
+        if (distTemp < 0) distTemp = 0; 
+        if (distTemp > 50) distTemp = 50;
+        const distTempIdx = distTemp / 10; 
         
         document.getElementById('temp-used').innerText = chartTemp;
 
-        // PA: 1001 -> 2000.
-        let chartPA = Math.ceil(paRaw / 1000) * 1000;
-        if (chartPA < 0) chartPA = 0;
-        if (chartPA > 10000) chartPA = 10000; // Limit for T/O charts
+        // PA for Distance Charts (1000ft steps)
+        let distPA = Math.ceil(paRaw / 1000) * 1000;
+        if (distPA < 0) distPA = 0;
+        if (distPA > 10000) distPA = 10000;
         
-        document.getElementById('pa-used').innerText = chartPA;
+        document.getElementById('pa-used').innerText = distPA;
 
-        // 3. Slope Factors
-        // T/O: +12% per 1% Slope (Assume Uphill for Safety)
-        const slopeFactorTO = 1 + (Math.abs(slope) * 0.12);
-        // LDG: +9% per 1% Slope (Assume Downhill for Safety)
-        const slopeFactorLDG = 1 + (Math.abs(slope) * 0.09);
+        // 3. Slope Factors (Round Up Logic: 0.72 -> 1)
+        let slopeRounded = Math.ceil(Math.abs(slope));
+        // T/O: +12% per 1% Slope
+        const slopeFactorTO = 1 + (slopeRounded * 0.12);
+        // LDG: +9% per 1% Slope
+        const slopeFactorLDG = 1 + (slopeRounded * 0.09);
 
-        // 4. Get Data & Apply Factors
-        
-        // Helper to update UI
+        // 4. Update Distance Results
         const updateUI = (idBase, table, factor) => {
-            let val = getTableVal(table, tempIdx, chartPA);
+            let val = getDistVal(table, distTempIdx, distPA);
             if (val) {
                 let finalM = Math.ceil(val * factor);
                 let finalFt = Math.ceil(finalM * 3.28);
@@ -516,18 +457,22 @@
         updateUI('abn-gr', ABN_GR, slopeFactorLDG);
         updateUI('abn-50', ABN_50, slopeFactorLDG);
 
-        // 5. Climb & Ceiling
-        // For Climb, use actual PA (interpolated) and Input Temp (interpolated logic inside getClimbVal handles closest)
-        let rocAll = getClimbVal(ROC_ALL, tempInput, paRaw);
-        let rocSingle = getClimbVal(ROC_SINGLE, tempInput, paRaw);
-        
-        document.getElementById('roc-all').innerText = rocAll;
-        document.getElementById('roc-single').innerText = rocSingle;
+        // 5. Climb Performance (Direct Lookup)
+        [cite_start]// Climb Chart PA (2000ft steps) [cite: 48, 57]
+        let climbPA = Math.ceil(paRaw / 2000) * 2000;
+        if (climbPA < 0) climbPA = 0;
+        if (climbPA > 18000) climbPA = 18000;
+        let climbAltIdx = climbPA / 2000;
 
-        // Service Ceiling (Both 100fpm, Single 50fpm)
-        // Uses Round Up Temp logic for safety
-        let ceilAll = calcServiceCeiling(ROC_ALL, tempInput, 100);
-        let ceilSingle = calcServiceCeiling(ROC_SINGLE, tempInput, 50);
+        let rocAllVal = ROC_ALL[climbAltIdx][climbTempIdx];
+        let rocSingleVal = ROC_SINGLE[climbAltIdx][climbTempIdx];
+
+        document.getElementById('roc-all').innerText = rocAllVal;
+        document.getElementById('roc-single').innerText = rocSingleVal;
+
+        // 6. Service Ceiling (Highest valid altitude)
+        let ceilAll = calcServiceCeiling(ROC_ALL, climbTempIdx, 100);
+        let ceilSingle = calcServiceCeiling(ROC_SINGLE, climbTempIdx, 50);
 
         document.getElementById('ceil-all').innerText = ceilAll;
         document.getElementById('ceil-single').innerText = ceilSingle;
