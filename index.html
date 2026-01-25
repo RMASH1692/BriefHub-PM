@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DA42 NG Performance Calculator (Safe/Round-Up)</title>
+    <title>DA42 NG Performance Calculator (Safe/PDF Step)</title>
     <style>
         body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; background-color: #f4f4f4; }
         .container { background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
@@ -26,7 +26,7 @@
 
 <div class="container">
     <h1>DA42 NG Performance (1900kg)</h1>
-    <p style="text-align:center; font-size:0.9em; color:#666;">Conservative Mode: Inputs are rounded UP to next chart bracket.</p>
+    <p style="text-align:center; font-size:0.9em; color:#666;">Conservative Mode: Inputs rounded UP to chart values. <br>Ceiling uses chart steps.</p>
     
     <div class="input-group">
         <label>Airport Altitude (ft)</label>
@@ -50,8 +50,8 @@
         
         <div class="result-box">
             <div class="result-title">Takeoff Performance (Flaps UP, MAX Power)</div>
-            <div>Ground Roll: <span id="toRoll" class="result-value">---</span> m</div>
-            <div>50ft Distance: <span id="to50" class="result-value">---</span> m</div>
+            <div>Ground Roll: <span id="toRoll" class="result-value">---</span></div>
+            <div>50ft Distance: <span id="to50" class="result-value">---</span></div>
         </div>
 
         <div class="result-box">
@@ -61,29 +61,30 @@
         </div>
 
         <div class="result-box">
-            <div class="result-title">Service Ceiling (Est. at rounded Temp)</div>
+            <div class="result-title">Service Ceiling (Step value from PDF)</div>
             <div>All Engines (>100fpm): <span id="ceilAll" class="result-value">---</span> ft</div>
             <div>One Engine Inop (>50fpm): <span id="ceilOne" class="result-value">---</span> ft</div>
+            <div class="sub-value">*Highest chart altitude where ROC exceeds limit at rounded Temp.</div>
         </div>
 
         <div class="result-box">
             <div class="result-title">Landing Normal (Flaps LDG, IDLE)</div>
-            <div>Ground Roll: <span id="ldgRoll" class="result-value">---</span> m</div>
-            <div>50ft Distance: <span id="ldg50" class="result-value">---</span> m</div>
+            <div>Ground Roll: <span id="ldgRoll" class="result-value">---</span></div>
+            <div>50ft Distance: <span id="ldg50" class="result-value">---</span></div>
         </div>
 
         <div class="result-box">
             <div class="result-title">Abnormal Landing (Flaps UP, IDLE)</div>
-            <div>Ground Roll: <span id="abnLdgRoll" class="result-value">---</span> m</div>
-            <div>50ft Distance: <span id="abnLdg50" class="result-value">---</span> m</div>
+            <div>Ground Roll: <span id="abnLdgRoll" class="result-value">---</span></div>
+            <div>50ft Distance: <span id="abnLdg50" class="result-value">---</span></div>
         </div>
 
     </div>
 </div>
 
 <script>
-// --- DATA SOURCE ---
-// Page 1: Takeoff
+[cite_start]// --- DATA SOURCE (From PDF) [cite: 232-272] ---
+[cite_start]// Page 1: Takeoff [cite: 236]
 const takeoffData = {
     temps: [0, 10, 20, 30, 40, 50],
     alts: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000],
@@ -115,7 +116,7 @@ const takeoffData = {
     ]
 };
 
-// Page 2: Climb All Engines
+[cite_start]// Page 2: Climb All Engines [cite: 241]
 const climbAllData = {
     temps: [-20, -10, 0, 10, 20, 30, 40, 50],
     alts: [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000],
@@ -133,7 +134,7 @@ const climbAllData = {
     ]
 };
 
-// Page 3: Climb Single Engine
+[cite_start]// Page 3: Climb Single Engine [cite: 250]
 const climbOneData = {
     temps: [-20, -10, 0, 10, 20, 30, 40, 50],
     alts: [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000],
@@ -151,7 +152,7 @@ const climbOneData = {
     ]
 };
 
-// Page 4: Landing Normal
+[cite_start]// Page 4: Landing Normal [cite: 262]
 const ldgNormData = {
     temps: [0, 10, 20, 30, 40, 50],
     alts: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000],
@@ -183,7 +184,7 @@ const ldgNormData = {
     ]
 };
 
-// Page 5: Landing Abnormal
+[cite_start]// Page 5: Landing Abnormal [cite: 270]
 const ldgAbnData = {
     temps: [0, 10, 20, 30, 40, 50],
     alts: [0, 1000, 2000, 3000, 4000, 5000, 6000, 7000, 8000, 9000, 10000],
@@ -227,18 +228,14 @@ function calculatePerformance() {
     const pa = Math.round((29.92 - qnh) * 1000 + alt);
     
     // 3. Determine "Rounded Up" Values for Lookup
-    // Find the closest chart values that are >= input
-    
     // Helper to find index
     const findCeilIndex = (arr, val) => {
         for(let i=0; i<arr.length; i++) {
             if(arr[i] >= val) return i;
         }
-        return arr.length - 1; // If above max, use max (Safe constraint)
+        return arr.length - 1; 
     };
 
-    // Use Takeoff Data to find standard indices (Assume all charts share similar steps, but we will look up per chart to be safe)
-    // Actually, for display purposes we just show what we are targeting based on standard steps
     const chartTemps = takeoffData.temps;
     const chartAlts = takeoffData.alts;
     
@@ -250,17 +247,24 @@ function calculatePerformance() {
 
     // Update Display
     document.getElementById('paDisplay').innerText = `Calculated Pressure Altitude: ${pa} ft`;
-    document.getElementById('calcInfo').innerText = `Used for Calculation (Rounded UP): Alt ${usedAlt} ft / Temp ${usedTemp}°C`;
+    document.getElementById('calcInfo').innerText = `Using Chart Values (Rounded UP): Alt ${usedAlt} ft / Temp ${usedTemp}°C`;
     document.getElementById('results').style.display = 'block';
 
-    // 4. Lookup Values (No Interpolation)
+    // 4. Lookup Values (No Interpolation) & Display with ft conversion
     
+    // Helper to format M and FT
+    const fmtDist = (val_m) => {
+        if (val_m === null || val_m === undefined) return "N/A";
+        const val_ft = Math.round(val_m * 3.28);
+        return `${val_m} m / ${val_ft} ft`;
+    };
+
     // Takeoff
     const toRoll = getSafeValue(takeoffData, pa, temp);
     const to50 = getSafeValue({...takeoffData, roll: takeoffData.dist50}, pa, temp);
 
-    document.getElementById('toRoll').innerText = toRoll !== null ? toRoll : "N/A";
-    document.getElementById('to50').innerText = to50 !== null ? to50 : "N/A";
+    document.getElementById('toRoll').innerText = fmtDist(toRoll);
+    document.getElementById('to50').innerText = fmtDist(to50);
 
     // Climb (Current)
     const rocAll = getSafeValue(climbAllData, pa, temp, "roc");
@@ -269,27 +273,25 @@ function calculatePerformance() {
     document.getElementById('climbAll').innerText = rocAll !== null ? rocAll : "N/A";
     document.getElementById('climbOne').innerText = rocOne !== null ? rocOne : "N/A";
 
-    // Service Ceiling (Search Algorithm)
-    // For ceiling, we will use the ROUNDED UP Temperature to select the column,
-    // then find where that column crosses the limit. 
-    // We do NOT round the resulting altitude because the ceiling IS the altitude limit.
-    const ceilAll = findCeiling(climbAllData, usedTemp, 100);
-    const ceilOne = findCeiling(climbOneData, usedTemp, 50);
+    // Service Ceiling (Discrete Step from PDF)
+    // Uses the "Rounded UP" Temperature column, finds highest Alt with valid ROC.
+    const ceilAll = findCeilingStep(climbAllData, usedTemp, 100);
+    const ceilOne = findCeilingStep(climbOneData, usedTemp, 50);
 
-    document.getElementById('ceilAll').innerText = ceilAll !== null ? Math.round(ceilAll) : "< 0";
-    document.getElementById('ceilOne').innerText = ceilOne !== null ? Math.round(ceilOne) : "< 0";
+    document.getElementById('ceilAll').innerText = ceilAll !== null ? ceilAll : "N/A";
+    document.getElementById('ceilOne').innerText = ceilOne !== null ? ceilOne : "N/A";
 
     // Landing Normal
     const lR = getSafeValue(ldgNormData, pa, temp);
     const l50 = getSafeValue({...ldgNormData, roll: ldgNormData.dist50}, pa, temp);
-    document.getElementById('ldgRoll').innerText = lR !== null ? lR : "N/A";
-    document.getElementById('ldg50').innerText = l50 !== null ? l50 : "N/A";
+    document.getElementById('ldgRoll').innerText = fmtDist(lR);
+    document.getElementById('ldg50').innerText = fmtDist(l50);
 
     // Landing Abnormal
     const alR = getSafeValue(ldgAbnData, pa, temp);
     const al50 = getSafeValue({...ldgAbnData, roll: ldgAbnData.dist50}, pa, temp);
-    document.getElementById('abnLdgRoll').innerText = alR !== null ? alR : "N/A";
-    document.getElementById('abnLdg50').innerText = al50 !== null ? al50 : "N/A";
+    document.getElementById('abnLdgRoll').innerText = fmtDist(alR);
+    document.getElementById('abnLdg50').innerText = fmtDist(al50);
 }
 
 // "Step" Function (Round Up Lookup)
@@ -306,7 +308,7 @@ function getSafeValue(dataObj, targetAlt, targetTemp, dataKey = "roll") {
             break;
         }
     }
-    if (tIdx === -1) tIdx = temps.length - 1; // Cap at max
+    if (tIdx === -1) tIdx = temps.length - 1; 
 
     // 2. Find Alt Index (Values >= target)
     let aIdx = -1;
@@ -316,43 +318,34 @@ function getSafeValue(dataObj, targetAlt, targetTemp, dataKey = "roll") {
             break;
         }
     }
-    if (aIdx === -1) aIdx = alts.length - 1; // Cap at max
+    if (aIdx === -1) aIdx = alts.length - 1;
 
     return matrix[aIdx][tIdx];
 }
 
-// Function to find Service Ceiling
-function findCeiling(dataObj, usedTemp, limitROC) {
-    // 1. Find the column index for the Used Temperature (Already rounded up)
+// Function to find Service Ceiling (Using only PDF Steps)
+function findCeilingStep(dataObj, usedTemp, limitROC) {
+    // 1. Find the column index for the Used Temperature
     let tIdx = dataObj.temps.indexOf(usedTemp);
-    if (tIdx === -1) tIdx = dataObj.temps.length - 1; // Fallback
+    if (tIdx === -1) tIdx = dataObj.temps.length - 1;
 
-    // 2. Get ROCs for this specific temperature column
-    const colROCs = [];
+    // 2. Iterate altitudes from low to high
+    // Find the LAST altitude where ROC >= limit
+    let ceilingAlt = null;
+
     for(let i=0; i<dataObj.alts.length; i++) {
-        colROCs.push(dataObj.roc[i][tIdx]);
-    }
-
-    // 3. Scan downwards to find where we cross the limit
-    for (let i = 0; i < colROCs.length - 1; i++) {
-        const r1 = colROCs[i];
-        const r2 = colROCs[i+1];
-        const a1 = dataObj.alts[i];
-        const a2 = dataObj.alts[i+1];
-
-        if (r1 !== null && r2 !== null) {
-            if ((r1 >= limitROC && r2 <= limitROC)) {
-                // Linear Interpolate the ALTITUDE crossing
-                const ratio = (limitROC - r1) / (r2 - r1);
-                return a1 + (a2 - a1) * ratio;
-            }
+        const val = dataObj.roc[i][tIdx];
+        
+        // If val is valid (not null) and above limit, this alt is achievable
+        if (val !== null && val >= limitROC) {
+            ceilingAlt = dataObj.alts[i];
+        } else {
+            // As soon as we hit a value below limit or null, we stop assuming higher is possible
+            // (Assuming performance decreases with altitude)
+            break; 
         }
     }
-    
-    if (colROCs[0] < limitROC) return 0;
-    if (colROCs[colROCs.length-1] > limitROC) return dataObj.alts[dataObj.alts.length-1];
-
-    return null;
+    return ceilingAlt;
 }
 
 </script>
