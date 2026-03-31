@@ -5,104 +5,172 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DA42NG Performance Calculator (1900kg)</title>
 <style>
-    :root {
-        --primary: #0056b3;
-        --bg: #f4f4f9;
-        --card: #ffffff;
-        --text: #333333;
-    }
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-        background-color: var(--bg);
-        color: var(--text);
-        margin: 0;
-        padding: 20px;
+    body { 
+        font-family: Arial, sans-serif; 
+        color: #333; 
+        max-width: 900px; 
+        margin: 0 auto; 
+        padding: 20px; 
+        background-color: #fff; 
         line-height: 1.6;
     }
-    .container {
-        max-width: 800px;
-        margin: 0 auto;
+    h1 { 
+        text-align: center; 
+        font-weight: normal; 
+        border-bottom: 2px solid #0078D4; 
+        padding-bottom: 15px; 
+        margin-bottom: 20px; 
+        letter-spacing: 1px; 
+        color: #0078D4; 
+        font-size: 24px;
     }
-    h1 {
-        text-align: center;
-        color: var(--primary);
-        font-size: 1.5rem;
-        margin-bottom: 20px;
+    
+    /* Input Container (Search Container Style) */
+    .input-container { 
+        display: flex; 
+        gap: 15px; 
+        justify-content: center; 
+        align-items: center; 
+        margin-bottom: 20px; 
+        flex-wrap: wrap; 
+        background: #f8f9fa; 
+        padding: 20px; 
+        border-radius: 8px; 
+        border: 1px solid #eee;
     }
-    .card {
-        background: var(--card);
-        border-radius: 12px;
-        padding: 20px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+    .input-item {
+        display: flex;
+        flex-direction: column;
+        width: calc(25% - 15px);
+        min-width: 130px;
     }
-    .input-group {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        margin-bottom: 15px;
+    label { 
+        font-weight: bold; 
+        font-size: 14px; 
+        margin-bottom: 5px; 
+        color: #0078D4; 
     }
-    @media (max-width: 600px) {
-        .input-group { grid-template-columns: 1fr; }
-    }
-    label {
-        font-weight: bold;
-        display: block;
-        margin-bottom: 5px;
-        font-size: 0.9rem;
-    }
-    input {
-        width: 100%;
-        padding: 10px;
-        border: 1px solid #ccc;
-        border-radius: 6px;
+    input[type="number"] { 
+        padding: 10px; 
+        font-size: 16px; 
+        border: 1px solid #ccc; 
+        width: 100%; 
+        outline: none; 
+        border-radius: 4px;
         box-sizing: border-box;
-        font-size: 1rem;
     }
-    .btn-group {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-bottom: 15px;
+    input[type="number"]:focus { 
+        border-color: #0078D4; 
     }
-    button {
-        background-color: #e0e7ff;
-        color: var(--primary);
-        border: 1px solid var(--primary);
-        padding: 8px 12px;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: bold;
+
+    /* Buttons */
+    .btn-group { 
+        display: flex; 
+        flex-wrap: wrap; 
+        gap: 10px; 
+        margin-bottom: 5px; 
+    }
+    button { 
+        padding: 10px 20px; 
+        font-size: 14px; 
+        background-color: #0078D4; 
+        color: white; 
+        border: none; 
+        cursor: pointer; 
+        border-radius: 4px; 
         flex: 1;
-    }
-    button:hover {
-        background-color: var(--primary);
-        color: white;
-    }
-    .result-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 0;
-        border-bottom: 1px solid #eee;
-    }
-    .result-row:last-child { border-bottom: none; }
-    .result-label { font-size: 0.95rem; }
-    .result-val { font-weight: bold; color: var(--primary); text-align: right; }
-    .sub-text { font-size: 0.8rem; color: #666; font-weight: normal; display: block; }
-    .pa-display {
-        background-color: #333;
-        color: #fff;
-        padding: 10px;
-        border-radius: 6px;
+        min-width: 80px;
         text-align: center;
-        margin-bottom: 20px;
-        font-weight: bold;
     }
-    .warning {
-        font-size: 0.8rem;
-        color: #d9534f;
-        margin-top: 5px;
+    button:hover { 
+        background-color: #005a9e; 
+    }
+
+    /* Cards */
+    .card { 
+        border-left: 4px solid #0078D4; 
+        border-top: 1px solid #eee; 
+        border-right: 1px solid #eee; 
+        border-bottom: 1px solid #eee; 
+        padding: 20px; 
+        margin-bottom: 20px; 
+        border-radius: 0 4px 4px 0; 
+        background-color: #fff;
+    }
+    .card h3 { 
+        display: flex; 
+        align-items: center; 
+        margin: 0 0 15px 0; 
+        font-size: 20px; 
+        color: #0078D4; 
+        border-bottom: 1px dashed #eee; 
+        padding-bottom: 10px; 
+    }
+
+    /* Results rows */
+    .result-row { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center; 
+        padding: 12px 0; 
+        border-bottom: 1px solid #eee; 
+    }
+    .result-row:last-child { 
+        border-bottom: none; 
+    }
+    .result-label { 
+        font-weight: bold; 
+        font-size: 15px; 
+        color: #333; 
+    }
+    .result-val { 
+        font-family: 'Courier New', Courier, monospace; 
+        font-size: 16px; 
+        font-weight: bold; 
+        color: #0078D4; 
+        text-align: right; 
+    }
+    
+    /* Sub texts & Infos */
+    .sub-text { 
+        font-size: 13px; 
+        color: #777; 
+        font-weight: normal; 
+        margin-left: 10px; 
+        font-family: Arial, sans-serif;
+    }
+    .note-text { 
+        font-size: 12px; 
+        color: #777; 
+        margin-bottom: 10px; 
+    }
+    .pa-display { 
+        font-family: 'Courier New', Courier, monospace; 
+        background-color: #f9f9f9; 
+        padding: 15px; 
+        border: 1px solid #eee; 
+        font-size: 16px; 
+        line-height: 1.5; 
+        text-align: center; 
+        margin-bottom: 20px; 
+        border-radius: 4px; 
+        color: #333; 
+        font-weight: bold; 
+    }
+    .warning { 
+        font-size: 13px; 
+        color: #d9534f; 
+        margin-top: 10px; 
+        font-style: italic; 
+    }
+    hr { 
+        border: 0; 
+        border-top: 1px dashed #eee; 
+        margin: 15px 0; 
+    }
+
+    @media (max-width: 600px) {
+        .input-item { width: 100%; }
     }
 </style>
 </head>
@@ -112,43 +180,38 @@
     <h1>DA42NG Performance (1900kg)</h1>
 
     <div class="card">
-        <label>Airport Presets</label>
+        <h3>Airport Presets</h3>
         <div class="btn-group">
             <button onclick="setAirport(891, 0.72)">RJFK</button>
             <button onclick="setAirport(8, 0.33)">RJFU</button>
             <button onclick="setAirport(19, 0.25)">RJFM</button>
             <button onclick="setAirport(786, 0.30)">RJFG</button>
         </div>
-        <p style="font-size:0.8rem; color:#666;">
-            *手動入力可
-        </p>
+        <div class="note-text">*手動入力可</div>
     </div>
 
-    <div class="card">
-        <div class="input-group">
-            <div>
-                <label>Temperature (°C)</label>
-                <input type="number" id="temp" value="15" oninput="calc()">
-            </div>
-            <div>
-                <label>QNH (inHg)</label>
-                <input type="number" id="qnh" value="29.92" step="0.01" oninput="calc()">
-            </div>
-            <div>
-                <label>Airport Elevation (ft)</label>
-                <input type="number" id="elev" value="0" oninput="calc()">
-            </div>
-            <div>
-                <label>Runway Slope (%)</label>
-                <input type="number" id="slope" value="0" step="0.01" oninput="calc()">
-            </div>
+    <div class="input-container">
+        <div class="input-item">
+            <label>Temperature (°C)</label>
+            <input type="number" id="temp" value="15" oninput="calc()">
+        </div>
+        <div class="input-item">
+            <label>QNH (inHg)</label>
+            <input type="number" id="qnh" value="29.92" step="0.01" oninput="calc()">
+        </div>
+        <div class="input-item">
+            <label>Airport Elevation (ft)</label>
+            <input type="number" id="elev" value="0" oninput="calc()">
+        </div>
+        <div class="input-item">
+            <label>Runway Slope (%)</label>
+            <input type="number" id="slope" value="0" step="0.01" oninput="calc()">
         </div>
     </div>
 
     <div class="pa-display">
-        Pressure Altitude: <span id="pa-raw">0</span> ft
-        <br>
-        <span style="font-size:0.8rem; font-weight:normal; color:#ccc;">
+        Pressure Altitude: <span id="pa-raw" style="color:#0078D4;">0</span> ft<br>
+        <span style="font-size:13px; font-weight:normal; color:#777; font-family: Arial, sans-serif;">
             (Chart Uses: PA <span id="pa-used">0</span> ft / Temp <span id="temp-used">0</span>°C)
         </span>
     </div>
@@ -206,9 +269,7 @@
 
     <div class="card">
         <h3>Climb Performance & Ceiling</h3>
-        <p style="font-size:0.8rem; color:#666; margin-bottom:10px;">
-            *調整中
-        </p>
+        <div class="note-text" style="margin-bottom: 10px;">*調整中</div>
         <div class="result-row">
             <span class="result-label">Rate of Climb (Both Engines)</span>
             <div class="result-val"><span id="roc-all">---</span> fpm</div>
@@ -323,7 +384,7 @@
     const CLIMB_TEMPS = [-20, -10, 0, 10, 20, 30, 40, 50];
     const CLIMB_ALTS = [0, 2000, 4000, 6000, 8000, 10000, 12000, 14000, 16000, 18000];
     
-    [cite_start]// Page 2: All Engine ROC [cite: 48, 52]
+    // Page 2: All Engine ROC
     const ROC_ALL = [
         [1010,1030,1030,1030,1000,970,920,840], // 0ft
         [1000,1020,1020,980,950,920,860,790],   // 2000
@@ -337,7 +398,7 @@
         [740,740,730,510,320,100,50,0]          // 18000
     ];
 
-    [cite_start]// Page 3: Single Engine ROC [cite: 57]
+    // Page 3: Single Engine ROC
     const ROC_SINGLE = [
         [180,165,165,155,130,100,70,35],        // 0ft
         [155,145,145,130,105,90,35,0],          // 2000
@@ -457,7 +518,7 @@
         updateUI('abn-50', ABN_50, slopeFactorLDG);
 
         // 5. Climb Performance (Direct Lookup)
-        [cite_start]// Climb Chart PA (2000ft steps) [cite: 48, 57]
+        // Climb Chart PA (2000ft steps)
         let climbPA = Math.ceil(paRaw / 2000) * 2000;
         if (climbPA < 0) climbPA = 0;
         if (climbPA > 18000) climbPA = 18000;
