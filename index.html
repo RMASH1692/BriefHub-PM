@@ -436,15 +436,13 @@
         return val;
     }
 
-    // 2. Ceiling Logic (Find highest white cell)
+// 2. Ceiling Logic (Find highest white cell)
     function calcServiceCeiling(table, tempIdx, limit) {
         let maxAlt = "N/A";
-        // Iterate through all altitudes for the given temp column
-        // If value >= limit, it's valid. Keep track of the highest valid altitude.
-        // Since table is sorted by altitude (asc), we just walk through.
         for (let i = 0; i < CLIMB_ALTS.length; i++) {
             let val = table[i][tempIdx];
-            if (val !== undefined && val >= limit) {
+            // 9999 (No Data) を除外する条件を追加
+            if (val !== undefined && val !== 9999 && val >= limit) {
                 maxAlt = CLIMB_ALTS[i];
             }
         }
