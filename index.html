@@ -221,13 +221,13 @@
         <div class="result-row">
             <span class="result-label">Ground Roll</span>
             <div class="result-val">
-                <span id="to-gr-m">---</span> m <span class="sub-text"><span id="to-gr-ft">---</span> ft</span>
+                <span id="to-gr-ft">---</span> ft <span class="sub-text"><span id="to-gr-m">---</span> m</span>
             </div>
         </div>
         <div class="result-row">
             <span class="result-label">Distance 50ft</span>
             <div class="result-val">
-                <span id="to-50-m">---</span> m <span class="sub-text"><span id="to-50-ft">---</span> ft</span>
+                <span id="to-50-ft">---</span> ft <span class="sub-text"><span id="to-50-m">---</span> m</span>
             </div>
         </div>
         <div class="warning">Slope Penalty: +12% per 1%</div>
@@ -238,13 +238,13 @@
         <div class="result-row">
             <span class="result-label">Ground Roll</span>
             <div class="result-val">
-                <span id="ld-gr-m">---</span> m <span class="sub-text"><span id="ld-gr-ft">---</span> ft</span>
+                <span id="ld-gr-ft">---</span> ft <span class="sub-text"><span id="ld-gr-m">---</span> m</span>
             </div>
         </div>
         <div class="result-row">
             <span class="result-label">Distance 50ft</span>
             <div class="result-val">
-                <span id="ld-50-m">---</span> m <span class="sub-text"><span id="ld-50-ft">---</span> ft</span>
+                <span id="ld-50-ft">---</span> ft <span class="sub-text"><span id="ld-50-m">---</span> m</span>
             </div>
         </div>
         <div class="warning">Slope Penalty: +9% per 1%</div>
@@ -255,13 +255,13 @@
         <div class="result-row">
             <span class="result-label">Ground Roll</span>
             <div class="result-val">
-                <span id="abn-gr-m">---</span> m <span class="sub-text"><span id="abn-gr-ft">---</span> ft</span>
+                <span id="abn-gr-ft">---</span> ft <span class="sub-text"><span id="abn-gr-m">---</span> m</span>
             </div>
         </div>
         <div class="result-row">
             <span class="result-label">Distance 50ft</span>
             <div class="result-val">
-                <span id="abn-50-m">---</span> m <span class="sub-text"><span id="abn-50-ft">---</span> ft</span>
+                <span id="abn-50-ft">---</span> ft <span class="sub-text"><span id="abn-50-m">---</span> m</span>
             </div>
         </div>
         <div class="warning">Slope Penalty: +9% per 1%</div>
@@ -269,14 +269,18 @@
 
     <div class="card">
         <h3>Climb Performance & Ceiling</h3>
-        <div class="note-text" style="margin-bottom: 10px;">*調整中 (表示される値は実際と異なります。難しくてよくわからない)</div>
+        <div class="note-text" style="margin-bottom: 10px;">*調整中</div>
         <div class="result-row">
             <span class="result-label">Rate of Climb (Both Engines)</span>
-            <div class="result-val"><span id="roc-all">---</span> fpm</div>
+            <div class="result-val">
+                <span id="roc-all">---</span> fpm <span class="sub-text" id="grad-all"></span>
+            </div>
         </div>
         <div class="result-row">
             <span class="result-label">Rate of Climb (Single Engine)</span>
-            <div class="result-val"><span id="roc-single">---</span> fpm</div>
+            <div class="result-val">
+                <span id="roc-single">---</span> fpm <span class="sub-text" id="grad-single"></span>
+            </div>
         </div>
         <hr>
         <div class="result-row">
@@ -530,7 +534,22 @@
         document.getElementById('roc-all').innerText = rocAllVal;
         document.getElementById('roc-single').innerText = rocSingleVal;
 
-        // 6. Service Ceiling (Highest valid altitude)
+        // 6. Calculate Gradient (%) and Update UI
+        if (rocAllVal !== 9999 && rocAllVal !== undefined) {
+            let gradAll = (rocAllVal / 90 * 0.98).toFixed(1);
+            document.getElementById('grad-all').innerText = "(" + gradAll + "%)";
+        } else {
+            document.getElementById('grad-all').innerText = "";
+        }
+
+        if (rocSingleVal !== 9999 && rocSingleVal !== undefined) {
+            let gradSingle = (rocSingleVal / 85 * 0.98).toFixed(1);
+            document.getElementById('grad-single').innerText = "(" + gradSingle + "%)";
+        } else {
+            document.getElementById('grad-single').innerText = "";
+        }
+
+        // 7. Service Ceiling (Highest valid altitude)
         let ceilAll = calcServiceCeiling(ROC_ALL, climbTempIdx, 100);
         let ceilSingle = calcServiceCeiling(ROC_SINGLE, climbTempIdx, 50);
 
